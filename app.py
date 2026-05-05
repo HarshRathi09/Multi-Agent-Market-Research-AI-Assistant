@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import sqlite3
 import uuid
 from datetime import datetime, timedelta
+sqlite3.register_adapter(datetime, lambda dt: dt.isoformat())
 import markdown
 import logging
 import plotly.express as px
@@ -223,76 +224,98 @@ class UnicodeSupport(FPDF):
         self.cell(0, 10, f'Page {self.page_no()}', 0, 0, 'C')
 
 def create_pdf(company, result):
-    """Create a professional PDF report with company research results"""
-    try:
-        # Create PDF with Arial or fallback to standard font
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_auto_page_break(auto=True, margin=15)
-        
-        # Use standard ASCII-compatible bullet points
-        bullet = "-"  # Simple hyphen instead of Unicode bullet
-        
-        # Add header
-        pdf.set_font("Arial", 'B', size=16)
-        pdf.cell(0, 15, f"Research Report: {company}", ln=True, align='C')
-        pdf.set_font("Arial", 'I', size=10)
-        pdf.cell(0, 8, f"Generated on {datetime.now().strftime('%Y-%m-%d %H:%M')}", ln=True, align='C')
-        pdf.line(10, pdf.get_y() + 5, 200, pdf.get_y() + 5)
-        pdf.ln(10)
-        
-        def write_section(title, items):
-            """Write a section to the PDF with safe text handling"""
-            pdf.set_font("Arial", 'B', size=12)
-            pdf.cell(0, 10, title, ln=True)
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+
+    def clean_text(text):
+        return ''.join(c if ord(c) < 128 else ' ' for c in str(text))
+
+    def section_title(title):
+        pdf.ln(5)
+        pdf.set_font("Arial", 'B', 14)
+        pdf.cell(0, 10, title, ln=True)
+        pdf.set_draw_color(0, 0, 0)
+        pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+        pdf.ln(3)
+
+    def write_bullets(items):
+        pdf.set_font("Arial", size=11)
+        for item in items:
+            pdf.multi_cell(0, 8, f"- {clean_text(item)}")
+        pdf.ln(2)
+
+    # ---------------- HEADER ----------------
+    pdf.set_font("Arial", 'B', 18)
+    pdf.cell(0, 10, f"{company} Research Report", ln=True, align='C')
+
+    pdf.set_font("Arial", 'I', 10)
+    pdf.cell(0, 8, f"Generated on {datetime.now().strftime('%Y-%m-%d %H:%M')}", ln=True, align='C')
+
+    pdf.ln(10)
+
+    # ---------------- SECTIONS ----------------
+    section_title("1. Key Offerings")
+    write_bullets(result.get("key_offerings", []))
+
+    section_title("2. Market Trends")
+    write_bullets(result.get("market_trends", []))
+
+    section_title("3. AI Recommendations")
+    write_bullets(result.get("ai_recommendations", []))
+
+    # ---------------- USE CASES ----------------
+    section_title("4. AI/ML Use Cases")
+
+    for i, uc in enumerate(result.get("use_cases", []), 1):
+        pdf.set_font("Arial", 'B', 12)
+        pdf.multi_cell(0, 8, f"{i}. {clean_text(uc.get('case', ''))}")
+
+        pdf.set_font("Arial", size=11)
+        pdf.multi_cell(0, 7, f"Objective: {clean_text(uc.get('objective', ''))}")
+        pdf.multi_cell(0, 7, f"AI Application: {clean_text(uc.get('ai_application', ''))}")
+
+        pdf.set_font("Arial", 'I', 11)
+        pdf.multi_cell(0, 7, "Benefits:")
+
+        pdf.set_font("Arial", size=11)
+        for b in uc.get("cross_functional_benefit", []):
+            pdf.multi_cell(0, 7, f"   - {clean_text(b)}")
+
+        if uc.get("articles"):
+            pdf.set_font("Arial", 'I', 11)
+            pdf.multi_cell(0, 7, "References:")
             pdf.set_font("Arial", size=10)
-            
-            if isinstance(items, list):
-                for item in items:
-                    # Replace Unicode characters with ASCII equivalents
-                    clean_item = item.replace("•", "-").replace("–", "-").replace("'", "'")
-                    # Remove any other potentially problematic Unicode
-                    clean_item = ''.join(c if ord(c) < 128 else ' ' for c in clean_item)
-                    pdf.multi_cell(0, 8, f"{bullet} {clean_item}")
-            else:
-                # Handle string input
-                clean_text = str(items).replace("•", "-").replace("–", "-").replace("'", "'")
-                clean_text = ''.join(c if ord(c) < 128 else ' ' for c in clean_text)
-                pdf.multi_cell(0, 8, clean_text)
-            
-            pdf.ln(5)
+            for link in uc["articles"]:
+                pdf.multi_cell(0, 6, f"   - {link}")
 
-        # Write sections
-        write_section("Key Offerings", result['key_offerings'])
-        write_section("Market Trends", result['market_trends'])
-        # write_section("Opportunities", result['swot_analysis']['opportunities'])
-        # write_section("Threats", result['swot_analysis']['threats'])
-        write_section("AI Recommendations", result['ai_recommendations'])
-        write_section("Use Cases", result['use_cases'])
-        write_section("Implementation Plans", result['implementation_plans'])
-        write_section("Cost-Benefit Analysis", result['cost_benefit_analyses'])
-        write_section("Competitor Analysis", result['competitor_analysis_tool'])
-        write_section("Competitors", result['competitors'])
+        pdf.ln(4)
 
-        
-        # Add footer
-        pdf.set_y(-15)
-        pdf.set_font("Arial", 'I', size=8)
-        pdf.cell(0, 10, f"Page {pdf.page_no()}", align='C')
+    # ---------------- OTHER SECTIONS ----------------
+    section_title("5. Implementation Plans")
 
-        return pdf.output(dest='S').encode('latin1')
+    for plan in result.get("implementation_plans", []):
+        pdf.set_font("Arial", 'B', 12)
+        pdf. multi_cell(0, 8, clean_text(plan.get("use_case", "")))
+        pdf.set_font("Arial", size=11)
+        phases = plan.get("plan", {}).get("phases", [])
     
-    except Exception as e:
-        # Fallback to a simpler PDF without special characters if there's an error
-        st.warning(f"Warning: Some special characters might not display correctly in the PDF.")
-        
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", size=12)
-        pdf.cell(0, 10, f"Research Report: {company}", ln=True, align='C')
-        pdf.multi_cell(0, 10, "Error generating full report. Please view the report online for best results.")
-        
-        return pdf.output(dest='S').encode('latin1')
+        for p in phases:
+            pdf.set_font("Arial", 'I', 11)
+            pdf.multi_cell(0, 7, f"Phase: {clean_text(p.get('name', ''))}")       
+            pdf.set_font("Arial", size=10)
+        for act in p.get("activities", []):
+            pdf.multi_cell(0, 6, f"  - {clean_text(act)}")
+
+    pdf.ln(4)
+
+     
+    # ---------------- FOOTER ----------------
+    pdf.set_y(-15)
+    pdf.set_font("Arial", 'I', 8)
+    pdf.cell(0, 10, f"Page {pdf.page_no()}", align='C')
+
+    return pdf.output(dest='S').encode('latin1')
 
 # --- Alternative PDF using BytesIO ---
 def create_pdf_safe(company, result):
@@ -426,9 +449,10 @@ def render_sidebar():
         
         st.markdown("### 🧭 Navigation")
         page = st.radio(
-            "", 
+            "Select page", 
             ["🔬 Company Research", "📚 Past Reports", "⚙️ Settings"],
-            format_func=lambda x: x
+            format_func=lambda x: x,
+            label_visibility="hidden"
         )
         
         st.markdown("---")
@@ -594,12 +618,19 @@ def display_company_tab(company, result):
                 benefit_vals = []
                 benefit_labels = []
                 for benefit in benefits:
-                    value_range = benefit['estimated_value'].replace('$', '').replace(',', '').split('-')
+                    value_range = benefit['estimated_value'].replace('$', '').replace('%', '').replace(',', '').split('-')
                     benefit_labels.append(benefit['benefit'])
-                    benefit_vals.append(int(value_range[0]))  # taking min value
+                    try:
+                        benefit_vals.append(int(value_range[0]))  # taking min value
+                    except ValueError:
+                        # If not a number, skip this benefit for visualization
+                        continue
 
-                cost_range = analysis['implementation_costs']['total_cost_range'].replace('$', '').replace(',', '').split('-')
-                min_cost = int(cost_range[0])
+                cost_range = analysis['implementation_costs']['total_cost_range'].replace('$', '').replace('%', '').replace(',', '').split('-')
+                try:
+                    min_cost = int(cost_range[0])
+                except ValueError:
+                    min_cost = 0  # Default if not parseable
 
                 fig = go.Figure(data=[
                     go.Bar(name='Estimated Benefits', x=benefit_labels, y=benefit_vals, marker_color='green'),
@@ -888,7 +919,7 @@ def main():
         # Input form
         # Enhanced input form with better styling
         st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        with st.form("input_form"):
+        with st.form(key="input_form"):
             st.markdown("### 🚀 Start Your Research")
             
             col1, col2 = st.columns([2, 1])
@@ -1014,7 +1045,7 @@ def main():
             
             # Final completion
             current_display.markdown("<p style='color: #28a745; font-weight: bold; margin: 0;'>All Complete 🎉</p>", unsafe_allow_html=True)
-            st.balloons()
+            
     
     elif page == "Past Reports":
         st.title("📚 Past Reports")
@@ -1031,7 +1062,7 @@ def main():
         else:
             # Convert to DataFrame for display
             df = pd.DataFrame(reports, columns=["Company", "Industry", "Date"])
-            df["Date"] = pd.to_datetime(df["Date"]).dt.strftime("%Y-%m-%d %H:%M")
+            pd.to_datetime(..., format="mixed", errors="coerce")
 
             # Display header
             st.write("### Past Reports")
@@ -1053,7 +1084,7 @@ def main():
         
         st.subheader("User Settings")
         with st.expander("Change Password"):
-            with st.form("change_password_form"):
+            with st.form("Change Password"):
                 current_password = st.text_input("Current Password", type="password")
                 new_password = st.text_input("New Password", type="password")
                 confirm_new_password = st.text_input("Confirm New Password", type="password")
