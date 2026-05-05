@@ -11,7 +11,7 @@ langgraph==0.3.34
 
 groq==0.22.0
 openai==1.76.0
-tiktoken==0.7.0
+
 
 chromadb
 
