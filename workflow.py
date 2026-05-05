@@ -11,12 +11,13 @@ from Tools.costBenefitTool import CostBenefitTool
 from Tools.implementationPlanningTool import ImplementationPlanningTool
 from state import ResearchState
 from langchain_openai import ChatOpenAI
-
+from langchain_groq import ChatGroq
+import time
 def create_research_workflow(groq_api_key: str, tavily_api_key: str, progress_callback=None) -> Callable:
-    llm = ChatOpenAI(
-        model="meta-llama-3.1-8b-instruct:2",
+    llm = ChatGroq(
+        groq_api_key=groq_api_key,
         temperature=0.3,
-        base_url="http://127.0.0.1:1234/v1", api_key="lmstudio"
+        model_name="llama-3.3-70b-versatile",
     )
     # llm = ChatOpenAI(
     #     model="meta-llama/llama-3.3-8b-instruct:free",
@@ -39,6 +40,7 @@ def create_research_workflow(groq_api_key: str, tavily_api_key: str, progress_ca
         if progress_callback:
             progress_callback("🔍 Researching industry trends and company info...", 1, 8)
         result = industry_research_tool._run(state)
+        time.sleep(2)
         if progress_callback:
             progress_callback("✅ Industry research completed", 1, 8)
         return result
@@ -48,6 +50,7 @@ def create_research_workflow(groq_api_key: str, tavily_api_key: str, progress_ca
         if progress_callback:
             progress_callback("💡 Generating AI use cases...", 3, 8)
         result = use_case_generator_tool._run(state)
+        time.sleep(2)
         if progress_callback:
             progress_callback("✅ Use cases generated", 3, 8)
         return result
@@ -56,6 +59,7 @@ def create_research_workflow(groq_api_key: str, tavily_api_key: str, progress_ca
         if progress_callback:
             progress_callback("🤖 Creating AI recommendations...", 4, 8)
         result = ai_recommendation_tool._run(state)
+        time.sleep(2)
         if progress_callback:
             progress_callback("✅ AI recommendations completed", 4, 8)
         return result
@@ -64,6 +68,7 @@ def create_research_workflow(groq_api_key: str, tavily_api_key: str, progress_ca
         if progress_callback:
             progress_callback("📚 Collecting relevant resources...", 5, 8)
         result = resource_collector_tool._run(state)
+        time.sleep(2)
         if progress_callback:
             progress_callback("✅ Resources collected", 5, 8)
         return result
@@ -72,6 +77,7 @@ def create_research_workflow(groq_api_key: str, tavily_api_key: str, progress_ca
         if progress_callback:
             progress_callback("🏁 Analyzing competitors...", 6, 8)
         result = competitor_analysis_tool._run(state)
+        time.sleep(2)
         if progress_callback:
             progress_callback("✅ Competitor analysis completed", 6, 8)
         return result
@@ -80,6 +86,7 @@ def create_research_workflow(groq_api_key: str, tavily_api_key: str, progress_ca
         if progress_callback:
             progress_callback("🛠️ Creating implementation plans...", 7, 8)
         result = implementation_plan_tool._run(state)
+        time.sleep(2)
         if progress_callback:
             progress_callback("✅ Implementation plans created", 7, 8)
         return result
@@ -88,6 +95,7 @@ def create_research_workflow(groq_api_key: str, tavily_api_key: str, progress_ca
         if progress_callback:
             progress_callback("💰 Calculating cost-benefit analysis...", 8, 8)
         result = cost_benefit_tool._run(state)
+        time.sleep(2)
         if progress_callback:
             progress_callback("✅ Cost-benefit analysis completed", 8, 8)
         return result
