@@ -2,25 +2,19 @@ streamlit==1.44.1
 pandas==2.2.3
 numpy==2.2.4
 
-langchain==0.3.24
-langchain-core==0.3.56
-langchain-groq==0.3.2
-langchain-openai==0.3.14
-langchain-text-splitters==0.3.8
-langgraph==0.3.34
+langchain==0.1.16
+langchain-openai
+langchain-groq
 
-groq==0.22.0
-openai==1.76.0
+groq
+openai
 
+plotly
+fpdf
+reportlab
 
-chromadb
-
-plotly==6.0.1
-fpdf==1.7.2
-reportlab==4.4.0
-
-python-dotenv==1.1.0
-requests==2.32.3
-beautifulsoup4==4.13.4
-tavily-python==0.5.4
-yfinance==0.2.55
+python-dotenv
+requests
+beautifulsoup4
+tavily-python
+yfinance
